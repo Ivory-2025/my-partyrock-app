@@ -48,7 +48,7 @@ jobs:
           sam deploy \
             --stack-name smartmed-cycle \
             --s3-bucket ${{ secrets.SAM_DEPLOY_BUCKET }} \
-            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
             --region ap-southeast-5 \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset

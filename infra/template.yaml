@@ -2,7 +2,6 @@ AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: SmartMed Cycle — Lambda backends + S3 frontend
 
-# ── Globals ─────────────────────────────────────────────────
 Globals:
   Function:
     Runtime: python3.12
@@ -12,10 +11,8 @@ Globals:
       Variables:
         AWS_REGION_NAME: ap-southeast-5
 
-# ── Resources ────────────────────────────────────────────────
 Resources:
 
-  # IAM Role
   AppBedrockRole:
     Type: AWS::IAM::Role
     Properties:
@@ -40,7 +37,6 @@ Resources:
                   - bedrock:InvokeModelWithResponseStream
                 Resource: "*"
 
-  # ── Lambda: Extract from Photo ───────────────────────────
   ExtractfromPhotoFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -48,26 +44,9 @@ Resources:
       CodeUri: ../lambdas/extract_from_photo/
       Handler: app.app
       Role: !GetAtt AppBedrockRole.Arn
+      FunctionUrlConfig:
+        AuthType: NONE
 
-  ExtractfromPhotoUrl:
-    Type: AWS::Lambda::Url
-    Properties:
-      TargetFunctionArn: !GetAtt ExtractfromPhotoFunction.Arn
-      AuthType: NONE
-      Cors:
-        AllowOrigins: ["*"]
-        AllowMethods: ["POST", "OPTIONS"]
-        AllowHeaders: ["Content-Type"]
-
-  ExtractfromPhotoUrlPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !GetAtt ExtractfromPhotoFunction.Arn
-      Action: lambda:InvokeFunctionUrl
-      Principal: "*"
-      FunctionUrlAuthType: NONE
-
-  # ── Lambda: Medicine Card ────────────────────────────────
   MedicineCardFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -75,26 +54,9 @@ Resources:
       CodeUri: ../lambdas/medicine_card/
       Handler: app.app
       Role: !GetAtt AppBedrockRole.Arn
+      FunctionUrlConfig:
+        AuthType: NONE
 
-  MedicineCardUrl:
-    Type: AWS::Lambda::Url
-    Properties:
-      TargetFunctionArn: !GetAtt MedicineCardFunction.Arn
-      AuthType: NONE
-      Cors:
-        AllowOrigins: ["*"]
-        AllowMethods: ["POST", "OPTIONS"]
-        AllowHeaders: ["Content-Type"]
-
-  MedicineCardUrlPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !GetAtt MedicineCardFunction.Arn
-      Action: lambda:InvokeFunctionUrl
-      Principal: "*"
-      FunctionUrlAuthType: NONE
-
-  # ── Lambda: My Medicine Summary ──────────────────────────
   MyMedicineSummaryFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -102,26 +64,9 @@ Resources:
       CodeUri: ../lambdas/my_medicine_summary/
       Handler: app.app
       Role: !GetAtt AppBedrockRole.Arn
+      FunctionUrlConfig:
+        AuthType: NONE
 
-  MyMedicineSummaryUrl:
-    Type: AWS::Lambda::Url
-    Properties:
-      TargetFunctionArn: !GetAtt MyMedicineSummaryFunction.Arn
-      AuthType: NONE
-      Cors:
-        AllowOrigins: ["*"]
-        AllowMethods: ["POST", "OPTIONS"]
-        AllowHeaders: ["Content-Type"]
-
-  MyMedicineSummaryUrlPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !GetAtt MyMedicineSummaryFunction.Arn
-      Action: lambda:InvokeFunctionUrl
-      Principal: "*"
-      FunctionUrlAuthType: NONE
-
-  # ── Lambda: My Return Plan ───────────────────────────────
   MyReturnPlanFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -129,26 +74,9 @@ Resources:
       CodeUri: ../lambdas/my_return_plan/
       Handler: app.app
       Role: !GetAtt AppBedrockRole.Arn
+      FunctionUrlConfig:
+        AuthType: NONE
 
-  MyReturnPlanUrl:
-    Type: AWS::Lambda::Url
-    Properties:
-      TargetFunctionArn: !GetAtt MyReturnPlanFunction.Arn
-      AuthType: NONE
-      Cors:
-        AllowOrigins: ["*"]
-        AllowMethods: ["POST", "OPTIONS"]
-        AllowHeaders: ["Content-Type"]
-
-  MyReturnPlanUrlPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !GetAtt MyReturnPlanFunction.Arn
-      Action: lambda:InvokeFunctionUrl
-      Principal: "*"
-      FunctionUrlAuthType: NONE
-
-  # ── Lambda: SmartMed Help ────────────────────────────────
   SmartMedHelpFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -156,26 +84,9 @@ Resources:
       CodeUri: ../lambdas/smartmed_help/
       Handler: app.app
       Role: !GetAtt AppBedrockRole.Arn
+      FunctionUrlConfig:
+        AuthType: NONE
 
-  SmartMedHelpUrl:
-    Type: AWS::Lambda::Url
-    Properties:
-      TargetFunctionArn: !GetAtt SmartMedHelpFunction.Arn
-      AuthType: NONE
-      Cors:
-        AllowOrigins: ["*"]
-        AllowMethods: ["POST", "OPTIONS"]
-        AllowHeaders: ["Content-Type"]
-
-  SmartMedHelpUrlPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !GetAtt SmartMedHelpFunction.Arn
-      Action: lambda:InvokeFunctionUrl
-      Principal: "*"
-      FunctionUrlAuthType: NONE
-
-  # ── S3 Frontend Bucket ───────────────────────────────────
   FrontendBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -201,33 +112,25 @@ Resources:
             Action: s3:GetObject
             Resource: !Sub "arn:aws:s3:::${FrontendBucket}/*"
 
-# ── Outputs ──────────────────────────────────────────────────
 Outputs:
 
   ExtractfromPhotoUrl:
-    Description: URL for Extract from Photo Lambda
-    Value: !GetAtt ExtractfromPhotoUrl.FunctionUrl
+    Value: !GetAtt ExtractfromPhotoFunctionUrl.FunctionUrl
 
   MedicineCardUrl:
-    Description: URL for Medicine Card Lambda
-    Value: !GetAtt MedicineCardUrl.FunctionUrl
+    Value: !GetAtt MedicineCardFunctionUrl.FunctionUrl
 
   MyMedicineSummaryUrl:
-    Description: URL for My Medicine Summary Lambda
-    Value: !GetAtt MyMedicineSummaryUrl.FunctionUrl
+    Value: !GetAtt MyMedicineSummaryFunctionUrl.FunctionUrl
 
   MyReturnPlanUrl:
-    Description: URL for My Return Plan Lambda
-    Value: !GetAtt MyReturnPlanUrl.FunctionUrl
+    Value: !GetAtt MyReturnPlanFunctionUrl.FunctionUrl
 
   SmartMedHelpUrl:
-    Description: URL for SmartMed Help Lambda
-    Value: !GetAtt SmartMedHelpUrl.FunctionUrl
+    Value: !GetAtt SmartMedHelpFunctionUrl.FunctionUrl
 
   WebsiteUrl:
-    Description: S3 static website URL
     Value: !GetAtt FrontendBucket.WebsiteURL
 
   BucketName:
-    Description: S3 bucket name for frontend sync
     Value: !Ref FrontendBucket
