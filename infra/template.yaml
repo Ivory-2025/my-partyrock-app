@@ -1,25 +1,21 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: SmartMed Cycle — streaming Lambda backends + S3 frontend
+Description: SmartMed Cycle — Lambda backends + S3 frontend
 
 # ── Globals ─────────────────────────────────────────────────
 Globals:
   Function:
     Runtime: python3.12
     Timeout: 60
-    MemorySize: 256
-    Layers:
-      - arn:aws:lambda:ap-southeast-5:753240598075:layer:LambdaAdapterLayerX86:27
+    MemorySize: 512
     Environment:
       Variables:
-        AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
-        AWS_LWA_INVOKE_MODE: response_stream
-        PORT: "8080"
-        AWS_REGION: ap-southeast-5
+        AWS_REGION_NAME: ap-southeast-5
 
-# ── IAM Role ─────────────────────────────────────────────────
+# ── Resources ────────────────────────────────────────────────
 Resources:
 
+  # IAM Role
   AppBedrockRole:
     Type: AWS::IAM::Role
     Properties:
@@ -42,10 +38,7 @@ Resources:
                 Action:
                   - bedrock:InvokeModel
                   - bedrock:InvokeModelWithResponseStream
-                Resource:
-                  - !Sub "arn:aws:bedrock:*:${AWS::AccountId}:inference-profile/global.anthropic.claude-haiku-4-5-20251001-v1:0"
-                  - "arn:aws:bedrock:*::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0"
-                  - "arn:aws:bedrock:::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0"
+                Resource: "*"
 
   # ── Lambda: Extract from Photo ───────────────────────────
   ExtractfromPhotoFunction:
@@ -53,11 +46,26 @@ Resources:
     Properties:
       FunctionName: smartmed-extract-from-photo
       CodeUri: ../lambdas/extract_from_photo/
-      Handler: run.sh
+      Handler: app.app
       Role: !GetAtt AppBedrockRole.Arn
-      FunctionUrlConfig:
-        AuthType: NONE
-        InvokeMode: RESPONSE_STREAM
+
+  ExtractfromPhotoUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      TargetFunctionArn: !GetAtt ExtractfromPhotoFunction.Arn
+      AuthType: NONE
+      Cors:
+        AllowOrigins: ["*"]
+        AllowMethods: ["POST", "OPTIONS"]
+        AllowHeaders: ["Content-Type"]
+
+  ExtractfromPhotoUrlPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt ExtractfromPhotoFunction.Arn
+      Action: lambda:InvokeFunctionUrl
+      Principal: "*"
+      FunctionUrlAuthType: NONE
 
   # ── Lambda: Medicine Card ────────────────────────────────
   MedicineCardFunction:
@@ -65,11 +73,26 @@ Resources:
     Properties:
       FunctionName: smartmed-medicine-card
       CodeUri: ../lambdas/medicine_card/
-      Handler: run.sh
+      Handler: app.app
       Role: !GetAtt AppBedrockRole.Arn
-      FunctionUrlConfig:
-        AuthType: NONE
-        InvokeMode: RESPONSE_STREAM
+
+  MedicineCardUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      TargetFunctionArn: !GetAtt MedicineCardFunction.Arn
+      AuthType: NONE
+      Cors:
+        AllowOrigins: ["*"]
+        AllowMethods: ["POST", "OPTIONS"]
+        AllowHeaders: ["Content-Type"]
+
+  MedicineCardUrlPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt MedicineCardFunction.Arn
+      Action: lambda:InvokeFunctionUrl
+      Principal: "*"
+      FunctionUrlAuthType: NONE
 
   # ── Lambda: My Medicine Summary ──────────────────────────
   MyMedicineSummaryFunction:
@@ -77,11 +100,26 @@ Resources:
     Properties:
       FunctionName: smartmed-my-medicine-summary
       CodeUri: ../lambdas/my_medicine_summary/
-      Handler: run.sh
+      Handler: app.app
       Role: !GetAtt AppBedrockRole.Arn
-      FunctionUrlConfig:
-        AuthType: NONE
-        InvokeMode: RESPONSE_STREAM
+
+  MyMedicineSummaryUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      TargetFunctionArn: !GetAtt MyMedicineSummaryFunction.Arn
+      AuthType: NONE
+      Cors:
+        AllowOrigins: ["*"]
+        AllowMethods: ["POST", "OPTIONS"]
+        AllowHeaders: ["Content-Type"]
+
+  MyMedicineSummaryUrlPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt MyMedicineSummaryFunction.Arn
+      Action: lambda:InvokeFunctionUrl
+      Principal: "*"
+      FunctionUrlAuthType: NONE
 
   # ── Lambda: My Return Plan ───────────────────────────────
   MyReturnPlanFunction:
@@ -89,23 +127,53 @@ Resources:
     Properties:
       FunctionName: smartmed-my-return-plan
       CodeUri: ../lambdas/my_return_plan/
-      Handler: run.sh
+      Handler: app.app
       Role: !GetAtt AppBedrockRole.Arn
-      FunctionUrlConfig:
-        AuthType: NONE
-        InvokeMode: RESPONSE_STREAM
 
-  # ── Lambda: SmartMed Help (chat) ─────────────────────────
+  MyReturnPlanUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      TargetFunctionArn: !GetAtt MyReturnPlanFunction.Arn
+      AuthType: NONE
+      Cors:
+        AllowOrigins: ["*"]
+        AllowMethods: ["POST", "OPTIONS"]
+        AllowHeaders: ["Content-Type"]
+
+  MyReturnPlanUrlPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt MyReturnPlanFunction.Arn
+      Action: lambda:InvokeFunctionUrl
+      Principal: "*"
+      FunctionUrlAuthType: NONE
+
+  # ── Lambda: SmartMed Help ────────────────────────────────
   SmartMedHelpFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: smartmed-help
       CodeUri: ../lambdas/smartmed_help/
-      Handler: run.sh
+      Handler: app.app
       Role: !GetAtt AppBedrockRole.Arn
-      FunctionUrlConfig:
-        AuthType: NONE
-        InvokeMode: RESPONSE_STREAM
+
+  SmartMedHelpUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      TargetFunctionArn: !GetAtt SmartMedHelpFunction.Arn
+      AuthType: NONE
+      Cors:
+        AllowOrigins: ["*"]
+        AllowMethods: ["POST", "OPTIONS"]
+        AllowHeaders: ["Content-Type"]
+
+  SmartMedHelpUrlPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt SmartMedHelpFunction.Arn
+      Action: lambda:InvokeFunctionUrl
+      Principal: "*"
+      FunctionUrlAuthType: NONE
 
   # ── S3 Frontend Bucket ───────────────────────────────────
   FrontendBucket:
@@ -137,24 +205,24 @@ Resources:
 Outputs:
 
   ExtractfromPhotoUrl:
-    Description: Streaming URL for Extract from Photo Lambda
-    Value: !GetAtt ExtractfromPhotoFunctionUrl.FunctionUrl
+    Description: URL for Extract from Photo Lambda
+    Value: !GetAtt ExtractfromPhotoUrl.FunctionUrl
 
   MedicineCardUrl:
-    Description: Streaming URL for Medicine Card Lambda
-    Value: !GetAtt MedicineCardFunctionUrl.FunctionUrl
+    Description: URL for Medicine Card Lambda
+    Value: !GetAtt MedicineCardUrl.FunctionUrl
 
   MyMedicineSummaryUrl:
-    Description: Streaming URL for My Medicine Summary Lambda
-    Value: !GetAtt MyMedicineSummaryFunctionUrl.FunctionUrl
+    Description: URL for My Medicine Summary Lambda
+    Value: !GetAtt MyMedicineSummaryUrl.FunctionUrl
 
   MyReturnPlanUrl:
-    Description: Streaming URL for My Return Plan Lambda
-    Value: !GetAtt MyReturnPlanFunctionUrl.FunctionUrl
+    Description: URL for My Return Plan Lambda
+    Value: !GetAtt MyReturnPlanUrl.FunctionUrl
 
   SmartMedHelpUrl:
-    Description: Streaming URL for SmartMed Help (chat) Lambda
-    Value: !GetAtt SmartMedHelpFunctionUrl.FunctionUrl
+    Description: URL for SmartMed Help Lambda
+    Value: !GetAtt SmartMedHelpUrl.FunctionUrl
 
   WebsiteUrl:
     Description: S3 static website URL
