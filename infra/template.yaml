@@ -1,0 +1,171 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: SmartMed Cycle — streaming Lambda backends + S3 frontend
+
+# ── Parameters ──────────────────────────────────────────────
+Parameters:
+  AccountId:
+    Type: String
+    Default: !Sub "${AWS::AccountId}"
+
+# ── Globals ─────────────────────────────────────────────────
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 60
+    MemorySize: 256
+    Layers:
+      - arn:aws:lambda:ap-southeast-1:753240598075:layer:LambdaAdapterLayerX86:27
+    Environment:
+      Variables:
+        AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
+        AWS_LWA_INVOKE_MODE: response_stream
+        PORT: "8080"
+        AWS_REGION: ap-southeast-1
+
+# ── IAM Role ─────────────────────────────────────────────────
+Resources:
+
+  AppBedrockRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: SmartMedCycleBedrockRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: BedrockInvokePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                Resource:
+                  - !Sub "arn:aws:bedrock:*:${AWS::AccountId}:inference-profile/global.anthropic.claude-haiku-4-5-20251001-v1:0"
+                  - "arn:aws:bedrock:*::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0"
+                  - "arn:aws:bedrock:::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0"
+
+  # ── Lambda: Extract from Photo ───────────────────────────
+  ExtractfromPhotoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: smartmed-extract-from-photo
+      CodeUri: ../lambdas/extract_from_photo/
+      Handler: run.sh
+      Role: !GetAtt AppBedrockRole.Arn
+      FunctionUrlConfig:
+        AuthType: NONE
+        InvokeMode: RESPONSE_STREAM
+
+  # ── Lambda: Medicine Card ────────────────────────────────
+  MedicineCardFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: smartmed-medicine-card
+      CodeUri: ../lambdas/medicine_card/
+      Handler: run.sh
+      Role: !GetAtt AppBedrockRole.Arn
+      FunctionUrlConfig:
+        AuthType: NONE
+        InvokeMode: RESPONSE_STREAM
+
+  # ── Lambda: My Medicine Summary ──────────────────────────
+  MyMedicineSummaryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: smartmed-my-medicine-summary
+      CodeUri: ../lambdas/my_medicine_summary/
+      Handler: run.sh
+      Role: !GetAtt AppBedrockRole.Arn
+      FunctionUrlConfig:
+        AuthType: NONE
+        InvokeMode: RESPONSE_STREAM
+
+  # ── Lambda: My Return Plan ───────────────────────────────
+  MyReturnPlanFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: smartmed-my-return-plan
+      CodeUri: ../lambdas/my_return_plan/
+      Handler: run.sh
+      Role: !GetAtt AppBedrockRole.Arn
+      FunctionUrlConfig:
+        AuthType: NONE
+        InvokeMode: RESPONSE_STREAM
+
+  # ── Lambda: SmartMed Help (chat) ─────────────────────────
+  SmartMedHelpFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: smartmed-help
+      CodeUri: ../lambdas/smartmed_help/
+      Handler: run.sh
+      Role: !GetAtt AppBedrockRole.Arn
+      FunctionUrlConfig:
+        AuthType: NONE
+        InvokeMode: RESPONSE_STREAM
+
+  # ── S3 Frontend Bucket ───────────────────────────────────
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "smartmed-cycle-frontend-${AWS::AccountId}"
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+
+  FrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FrontendBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action: s3:GetObject
+            Resource: !Sub "arn:aws:s3:::${FrontendBucket}/*"
+
+# ── Outputs ──────────────────────────────────────────────────
+Outputs:
+
+  ExtractfromPhotoUrl:
+    Description: Streaming URL for Extract from Photo Lambda
+    Value: !GetAtt ExtractfromPhotoFunctionUrl.FunctionUrl
+
+  MedicineCardUrl:
+    Description: Streaming URL for Medicine Card Lambda
+    Value: !GetAtt MedicineCardFunctionUrl.FunctionUrl
+
+  MyMedicineSummaryUrl:
+    Description: Streaming URL for My Medicine Summary Lambda
+    Value: !GetAtt MyMedicineSummaryFunctionUrl.FunctionUrl
+
+  MyReturnPlanUrl:
+    Description: Streaming URL for My Return Plan Lambda
+    Value: !GetAtt MyReturnPlanFunctionUrl.FunctionUrl
+
+  SmartMedHelpUrl:
+    Description: Streaming URL for SmartMed Help (chat) Lambda
+    Value: !GetAtt SmartMedHelpFunctionUrl.FunctionUrl
+
+  WebsiteUrl:
+    Description: S3 static website URL
+    Value: !GetAtt FrontendBucket.WebsiteURL
+
+  BucketName:
+    Description: S3 bucket name for frontend sync
+    Value: !Ref FrontendBucket
