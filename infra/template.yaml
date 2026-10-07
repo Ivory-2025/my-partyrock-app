@@ -2,12 +2,6 @@ AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: SmartMed Cycle — streaming Lambda backends + S3 frontend
 
-# ── Parameters ──────────────────────────────────────────────
-Parameters:
-  AccountId:
-    Type: String
-    Default: !Sub "${AWS::AccountId}"
-
 # ── Globals ─────────────────────────────────────────────────
 Globals:
   Function:
