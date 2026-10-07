@@ -15,13 +15,13 @@ Globals:
     Timeout: 60
     MemorySize: 256
     Layers:
-      - arn:aws:lambda:ap-southeast-1:753240598075:layer:LambdaAdapterLayerX86:27
+      - arn:aws:lambda:ap-southeast-5:753240598075:layer:LambdaAdapterLayerX86:27
     Environment:
       Variables:
         AWS_LAMBDA_EXEC_WRAPPER: /opt/bootstrap
         AWS_LWA_INVOKE_MODE: response_stream
         PORT: "8080"
-        AWS_REGION: ap-southeast-1
+        AWS_REGION: ap-southeast-5
 
 # ── IAM Role ─────────────────────────────────────────────────
 Resources:

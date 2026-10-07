@@ -24,7 +24,7 @@ jobs:
         with:
           aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region:            ap-southeast-1
+          aws-region:            ap-southeast-5
 
       # ── 3. Python 3.12 ───────────────────────────────────
       - name: Set up Python 3.12
@@ -49,7 +49,7 @@ jobs:
             --stack-name smartmed-cycle \
             --s3-bucket ${{ secrets.SAM_DEPLOY_BUCKET }} \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
-            --region ap-southeast-1 \
+            --region ap-southeast-5 \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset
 
@@ -60,7 +60,7 @@ jobs:
           get_output() {
             aws cloudformation describe-stacks \
               --stack-name smartmed-cycle \
-              --region ap-southeast-1 \
+              --region ap-southeast-5 \
               --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" \
               --output text
           }
@@ -101,7 +101,7 @@ jobs:
         run: |
           WEBSITE=$(aws cloudformation describe-stacks \
             --stack-name smartmed-cycle \
-            --region ap-southeast-1 \
+            --region ap-southeast-5 \
             --query "Stacks[0].Outputs[?OutputKey=='WebsiteUrl'].OutputValue" \
             --output text)
           echo "🌐 SmartMed Cycle is live at: $WEBSITE"
